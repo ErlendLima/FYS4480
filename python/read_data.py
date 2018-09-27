@@ -1,26 +1,29 @@
 from sympy.parsing import sympy_parser
-from sympy.core.function import Lambda
 from sympy import symbols
 import pandas as pd
 
 class MatrixElementParser(object):
 
-    """Reads matrix element expressions from file and stores as a pandas
+    """
+    Reads matrix element expressions from file and stores as a pandas
     dataframe of sympy expressions, which can be evaluated for
-    different Z with i.e self.eval_data(Z=2). """
+    different Z with i.e self.eval_data(Z=2). 
+    """
 
     def __init__(self, filename = '../data/matrix_data.txt'):
         self.filename = filename
         self.sympy_data = self.read_data(filename)
 
     def read_data(self, filename):
+        """
+        Reads matrix element data from file, structured with lines
+        containing 'index1 index2 expression', separated by spaces.
+        """
         sympy_data = pd.DataFrame()
         with open(filename) as infile:
             lines = infile.read()
             for line in lines.split('\n'):
-                if not line:
-                    continue
-                # print(line)
+                if not line: continue
                 spl = line.split()
                 i1, i2 = spl[:2]
                 s = sympy_parser.parse_expr(spl[-1])
@@ -28,10 +31,16 @@ class MatrixElementParser(object):
         return sympy_data
     
     def eval_data(self, Z):
+        """
+        Evaluates matrix elements for a given Z. Returns pandas DataFrame.
+        """
         Z = symbols('Z')
         return self.sympy_data.applymap(lambda s:s.evalf(subs = {Z:1}))
 
-    def show_matrix(self, Z):
+    def show_matrix(self):
+        """
+        Plots the values of the matrix, for Z = 1.
+        """
         import numpy as np
         import matplotlib.pyplot as plt
         matr = self.eval_data(1)
@@ -52,4 +61,4 @@ class MatrixElementParser(object):
 if __name__ == "__main__":
     a = MatrixElementParser()
     print(a.eval_data(1))
-    a.show_matrix(1)
+    a.show_matrix()
