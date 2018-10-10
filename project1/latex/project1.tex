@@ -1,0 +1,264 @@
+\documentclass[10pt]{article}
+% \usepackage{mathabx}
+\usepackage{titling}
+\usepackage{multicol}
+\usepackage{amssymb}
+\usepackage{amsmath}
+\usepackage{physics}
+\usepackage[bottom]{footmisc}
+
+\usepackage{graphicx}
+\usepackage[margin=0.5in]{geometry}
+\usepackage{float}
+\usepackage{listings}
+\usepackage[utf8]{inputenc}
+\usepackage[parfill]{parskip}  
+\usepackage{siunitx}
+\usepackage[dvipsnames]{xcolor}
+
+\usepackage{cite}
+\usepackage{caption}
+\usepackage{tabularx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{cleveref}
+
+\captionsetup{width=0.6\linewidth}
+\renewcommand{\thefootnote}{\fnsymbol{footnote}}
+
+
+\newcommand{\rhomax}{\rho_{\text{max}}}
+\newcommand{\relerr}{\epsilon_{\text{rel}}}
+\newcommand{\bigO}[1]{\mathcal{O}(#1)}
+\newcommand{\rmd}{{\mathrm d}}
+
+\newcommand{\oder}[2]{\frac{{\rm d}#1}{{\rm d}#2}}
+\newcommand{\odder}[2]{\frac{{\rm d}#1}{{\rm d}#2}}
+\newcommand{\pd}[1]{\frac{\partial}{\partial #1}}
+\newcommand{\pdt}[2]{\frac{\partial #1}{\partial #2}}
+\newcommand{\pddt}[2]{\frac{\partial^2 #1}{\partial #2^2}}
+\newcommand{\tpddt}[2]{\tfrac{\partial^2 #1}{\partial #2^2}}
+
+\newcommand{\npdt}[3]{\frac{\partial^{#3} #1}{\partial #2^{#3}}}
+
+\newcommand{\cop}{a^{\dagger}}
+\newcommand{\aop}{a}
+\usepackage{simplewick}
+
+\graphicspath{{../figures/}}
+
+\newcommand\myshade{50}
+\colorlet{mylinkcolor}{violet}
+\colorlet{mycitecolor}{YellowOrange}
+\colorlet{myurlcolor}{Aquamarine}
+
+\usepackage{eso-pic}
+
+\begin{document}
+\title{FYS4480 Quantum mechanics for many-particle systems \\
+--- Project 1 ---}
+
+\author{Erlend Lima, Lasse Lorentz Braseth and Halvard Sutterud}
+\date{October 2018}
+\maketitle{\begin{center}\end{center}}
+\pagenumbering{gobble}
+
+% \AddToShipoutPictureBG*{\includegraphics[width=\paperwidth]{test.pdf}};
+% \clearpage
+
+\thispagestyle{empty}
+
+\begin{figure}[htpb]
+    \centering
+    \includegraphics[width=0.9\linewidth]{../figures/UiO_Segl_300dpi.png}
+    \label{fig:name}
+\end{figure}
+
+
+\newpage
+
+\begin{abstract}
+    Hei
+\end{abstract}
+    
+\tableofcontents
+% \newpage
+\begin{multicols}{2}
+
+\pagenumbering{arabic}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Introduction}
+\label{sec:introduction}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Theory}
+\label{sec:theory}
+
+\subsection{Second quantization}%
+\label{sub:second_quantization}
+
+We introduce the second quantization formalism to simplify the notation and
+calculations. Second quantization introduces creation and annihilation
+operators, which we will represent as $a^{\dagger}_p$ and $a_p$
+respectively. They work on a slater determinant in the following way, 
+
+\begin{align*}
+    \cop_p \ket{\alpha_1\alpha_2\dots\alpha_n} &=
+    \ket{p\alpha_1\alpha_2\dots\alpha_n}\\
+    \aop_p \ket{p\alpha_1\alpha_2\dots\alpha_n} &=
+    \ket{\alpha_1\alpha_2\dots\alpha_n}.
+\end{align*}
+
+The $\cop_p$ thus has the effect of creating a particle in the state $p$, and
+$\aop_p$ to remove a particle from the same state. In addition, we have 
+
+\begin{align*}
+    \cop_p \ket{p\alpha_1\alpha_2\dots\alpha_n} &= 0\\
+    \aop_p \ket{\alpha_1\alpha_2\dots\alpha_n} &= 0,
+\end{align*}
+
+i.e. the creation operator cannot create a particle in an occupied state
+(the Pauli Exclusion principle), and in the second case the annihilation
+operator cannot remove a particle not present (common sense).
+
+
+
+\subsection{Wicks theorem}%
+\label{sub:wicks_theorem}
+
+Wicks theorem states that a product of $N$ operators can be expressed as the
+normal-ordered product of the operators plus the normal-ordered products of
+every possible permutation of one to $N/2$ contractions of the same
+operators.
+
+only
+need to consider the sum over normal products of all contractions between
+two and two operators. 
+
+\subsubsection{Generalized wicks theorem}
+
+When using the particle-hole formalism, we need to give a small
+reformulation of wicks theorem. Main changes: We consider 
+
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\subsection{Part a (to be renamed)}
+
+% a)
+Our basis in the second
+quantization are slater determinants consisting of s-wave ($l=0$) hydrogen like single particle
+functions $R_{n0}(r)$, given by
+
+\begin{equation}
+    R_{n0}(r) = \left(\frac{2Z}{n}\right)^{3/2}
+    \sqrt{\frac{(n-1)!}{2n(n!)}}L_{n-1}^1 (\frac{2Zr}{n})
+    \exp(-\frac{Zr}{n}),
+\end{equation}
+
+where $L_{n-1}^1(r)$ are the so-called Laguerre polynomials. We then have a
+degeneracy for the states with quantum number $n$ of $2$, since we only
+consider s-waves. 
+
+
+We will be working with the helium atom. We define our single-particle
+Hilbert space to consist of the single-particle orbits $1s$, $2s$, and $3s$
+with corresponding spin degeneracies, and consider that we will be working
+with a two-electron system.  We will number the six
+possible single particle states $\ket{nm_s}$ as seen in
+\cref{tab:he_numbering}. The Fermi level is then defined to be $F = 2$. Our
+ansatz for the ground state $\ket{c} = \ket{\Phi_0}$ of the helium atom is
+then two electrons placed in the ground state with $n=1$, with opposite
+spin values, which we can then represent as
+%
+\begin{equation}
+    \ket{c} = \prod_{i=1}^{F} \cop_i\ket{0} = \cop_2\cop_1\ket{0} 
+\end{equation}
+
+
+% TODO: Skrive notasjon for indeksering over og under ferminivået.
+Assuming that the total spin is projection of the possible states is $M_S =
+0$, the possible one-particle-one-hole excitations are $\ket{\Phi_i^a} &=
+\cop_a\aop_i\ket{c}$ in these combinations,
+%
+\begin{align*}
+                   \ket{\Phi_1^3} &= \cop_3\aop_1\ket{c}\qc
+                   &\ket{\Phi_1^5} &= \cop_5\aop_1\ket{c}\\
+                   \ket{\Phi_2^4} &= \cop_4\aop_2\ket{c}\qc
+                   &\ket{\Phi_2^6} &= \cop_6\aop_2\ket{c},
+\end{align*}
+%
+while the possible two-particle-two-holes excitations are $\ket{\Phi_{ij}^{ab}} &=
+\cop_b\cop_a\aop_j\aop_i\ket{c}$ in the following combinations,
+%
+\begin{align*}
+    \ket{\Phi_{12}^{34}} &= \cop_4\cop_3\aop_2\aop_1\ket{c}\qc
+    & \ket{\Phi_{12}^{56}} &= \cop_6\cop_5\aop_2\aop_1\ket{c}\\
+    \ket{\Phi_{12}^{36}} &= \cop_6\cop_3\aop_2\aop_1\ket{c}\qc
+    & \ket{\Phi_{12}^{45}} &= \cop_5\cop_4\aop_2\aop_1\ket{c}.
+\end{align*}
+
+% b)
+
+
+\begin{table}[H]
+    \centering
+    \caption{Here $\uparrow$ corresponds to magnetic spin quantum number $m_s =
+    1/2$, while $\downarrow$ corresponds to $m_s = -1/2$. }
+    \label{tab:he_numbering}
+    \begin{tabular}{c | c c c c c c}
+        \toprule
+        \midrule
+        index & 1 & 2 & 3 & 4 & 5 & 6 \\
+        state & $\ket{1\uparrow}$ &
+         $\ket{1\downarrow}$ &
+         $\ket{2\uparrow}$   &
+         $\ket{2\downarrow}$ &
+         $\ket{3\uparrow}$   &
+         $\ket{3\downarrow}$ &
+         \bottomrule
+    \end{tabular}
+\end{table}
+
+
+\subsection{Part b (to be renamed)}
+
+The Hamiltonian in a second-quantized form is given as
+
+\begin{equation}
+    \hat H = \sum_{pq} \mel{p}{\hat h}{q} \cop_p\aop_q +
+    \frac{1}{4}\sum{pqrs}\mel{pq}{\hat v}{rs} \cop_p\cop_q\aop_s\aop_r,
+\end{equation}
+
+where the sums run both above and below the fermi surface. Splitting these
+sums give us the  BLA BLA
+
+
+Or maybe we should split it into  non-interacting and interacting?
+\begin{equation}
+    \hat H_0 = 
+    \sum_{pq > F}\mel{p}{h_0}{q} 
+\end{equation}
+
+\section{Methods and implementation}
+\label{sec:methods}
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Results}
+\label{sec:results}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Discussion}
+\label{sec:discussion}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusions}
+
+
+\bibliographystyle{plain}
+% \bibliography{../FYSSTK4155}{}
+\bibliography{FYS4480.bib}
+
+\end{multicols}
+\end{document}j
