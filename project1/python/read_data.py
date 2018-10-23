@@ -15,7 +15,7 @@ class MatrixElementParser(object):
     def __init__(self, filename='../data/matrix_data.txt', Z=1):
         self.filename = filename
         self.sympy_data = self.read_data(filename)
-        self.Z = 1  # invokes property
+        self.Z = Z  # invokes property
 
     def __getitem__(self, ind):
         """
@@ -36,6 +36,13 @@ class MatrixElementParser(object):
         mel = matr.loc[(r1, r2), (r3, r4)] * ((s1 == s3) and (s2 == s4)) \
             - matr.loc[(r1, r2), (r4, r3)] * ((s1 == s4) and (s2 == s3))
         return mel
+
+    def onebody(self,p,q):
+        n = p//2 + 1
+        if n != q//2 + 1:
+            return 0
+        else:
+            return -self.Z**2/(2*n**2)
 
     @staticmethod
     def read_data(filename):
@@ -113,6 +120,7 @@ class MatrixElementParser(object):
         cax = fig.colorbar(m, fraction=0.046, pad=0.04)
         cax.set_label('Units of $Z$')
         plt.show()
+
 
 
 if __name__ == "__main__":
