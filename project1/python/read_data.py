@@ -33,9 +33,8 @@ class MatrixElementParser(object):
         r1, r2, r3, r4 = ind // 2 + 1
 
         matr = self.matrix
-
         mel = matr.loc[(r1, r2), (r3, r4)] * ((s1 == s3) and (s2 == s4)) \
-            - matr.loc[(r1, r2), (r4, r3)] * ((s1 == s4) and (s2 == r3))
+            - matr.loc[(r1, r2), (r4, r3)] * ((s1 == s4) and (s2 == s3))
         return mel
 
     @staticmethod
