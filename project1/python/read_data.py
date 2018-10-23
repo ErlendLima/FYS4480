@@ -1,6 +1,8 @@
 from sympy.parsing import sympy_parser
-from sympy import symbols
+import sympy as sp
+import numpy as np
 import pandas as pd
+
 
 class MatrixElementParser(object):
 
@@ -10,11 +12,33 @@ class MatrixElementParser(object):
     different Z with i.e self.eval_data(Z=2). 
     """
 
-    def __init__(self, filename = '../data/matrix_data.txt'):
+    def __init__(self, filename = '../data/matrix_data.txt', Z = 1):
         self.filename = filename
         self.sympy_data = self.read_data(filename)
+        self.Z = 1 # invokes property
 
-    def read_data(self, filename):
+    def __getitem__(self, ind):
+        """ 
+        Gets matrix element <pq|V|rs>_AS from ind = [p,q,r,s], assuming
+        p,q,r,s \in {0,...,5} with odd and even integers corresponding to
+        opposite spins, and (p//2 + 1) as the energy levels 1s, 2s, 3s.
+        """
+        ind = np.array(ind)
+
+        # spin indices
+        s1,s2,s3,s4 = ind % 2 
+        # spatial indices
+        r1,r2,r3,r4 = ind // 2 + 1
+
+        matr = self.matrix
+        
+        mel = matr.loc[(r1,r2),(r3,r4)] * ((s1==s3) and (s2 == s4)) \
+            - matr.loc[(r1,r2),(r4,r3)] * ((s1==s4) and (s2 == r3))
+        return mel
+
+
+    @staticmethod
+    def read_data(filename):
         """
         Reads matrix element data from file, structured with lines
         containing 'index1 index2 expression', separated by spaces.
@@ -30,12 +54,47 @@ class MatrixElementParser(object):
                 sympy_data.loc[i1,i2] = s
         return sympy_data
     
-    def eval_data(self, Z):
+    def eval_data(self, Z=None, index_type = 'multiindex'):
         """
-        Evaluates matrix elements for a given Z. Returns pandas DataFrame.
+        Evaluates matrix elements for a given Z, defaulting to given Z. Returns pandas DataFrame.
         """
-        Z = symbols('Z')
-        return self.sympy_data.applymap(lambda s:s.evalf(subs = {Z:1}))
+        Z = Z or self.Z
+        Z_symb = sp.symbols('Z')
+
+        m = self.sympy_data.applymap(lambda s:s.evalf(subs = {Z_symb:Z}))
+
+        # m = matr_parse.sympy_data.applymap(lambda s:s.evalf(subs = {Z_symb:Z}))
+        if index_type == 'multiindex':
+            col1, col2 = m.columns.str
+            col1, col2 = col1.astype('int'), col2.astype('int')
+            row1, row2 = m.index.str
+            row1, row2 = row1.astype('int'), row2.astype('int')
+
+            row_ind = pd.MultiIndex.from_arrays([row1,row2])
+            col_ind = pd.MultiIndex.from_arrays([col1,col2])
+            m.index   = row_ind
+            m.columns = col_ind
+        return m.astype('float')
+    
+    @property
+    def matrix(self):
+        """Returns matrix"""
+        try:
+            return self._matrix
+        except AttributeError:
+            self._matrix = self.eval_data()
+            return self._matrix
+
+    @property
+    def Z(self):
+        """Very redundant :)"""
+        return self._Z
+
+    @Z.setter
+    def Z(self, Z):
+        self._Z = Z
+
+
 
     def show_matrix(self):
         """
@@ -57,6 +116,12 @@ class MatrixElementParser(object):
         cax = plt.colorbar(m)#, orientation='horizontal')
         cax.set_label('Units of $Z$')
         plt.show()
+
+    
+
+
+
+        
 
 if __name__ == "__main__":
     a = MatrixElementParser()
