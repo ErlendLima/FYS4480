@@ -27,9 +27,9 @@ class MatrixElementParser:
         if np.any(ind < 0) or np.any(5 < ind):
             raise IndexError("Index out of range.")
 
-        if len(ind) == 2:
+        if ind.size == 2:
             return self.onebody(*ind)
-        elif len(ind) != 4:
+        elif ind.size != 4:
             raise IndexError("Expected 2 or 4 indices.")
 
         # spin indices

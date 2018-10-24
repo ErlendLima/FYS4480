@@ -52,8 +52,8 @@ class FCI:
         ref_ref[0, 0] = self.Eref
         for ind1, (i, a) in enumerate(singles):
             # Evaluate <c|H|Φ_i^a> = <i|h|a> + Σ<ij|a|aj>
-            ref_sing[ind1] = self.matrix[i, a]
-            ref_sing[ind1] = sum(self.matrix[i, j, a, j] for j in core)
+            ref_sing[ind1] = self.matrix[i, a] # = 0 always
+            ref_sing[ind1] += sum(self.matrix[i, j, a, j] for j in core)
 
             # Evaluate <Φ_i^a|H|Φ_j^b> = <aj|v|ib>_AS + <a|h|b>δij
             #                          - <j|h|i>δab + Erefδijδab
@@ -61,7 +61,7 @@ class FCI:
                 E = self.matrix[a, j, i, b]
                 E += self.matrix[a, b] if i == j else 0
                 E -= self.matrix[j, i] if a == b else 0
-                E += self.Eref if (i == j and a == b) else 0
+                E += self.Eref if ((i == j) and (a == b)) else 0
                 for k in range(nsingles):
                     E += self.matrix[a, k, b, k] if i == j else 0
                     E -= self.matrix[j, k, i, k] if a == b else 0
@@ -73,7 +73,7 @@ class FCI:
 
     def energy_states(self):
         H = self.Hamiltonian()
-        e, v = np.linalg.eig(H)
+        e, v = np.linalg.eigh(H)
         # print(e, v)
         # print(np.sort(e))
         return e, v
