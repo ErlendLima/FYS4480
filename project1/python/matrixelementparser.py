@@ -30,7 +30,7 @@ class MatrixElementParser:
         if len(ind) == 2:
             return self.onebody(*ind)
         elif len(ind) != 4:
-            raise IndexError("Expected 2 or 4 indicies.")
+            raise IndexError("Expected 2 or 4 indices.")
 
         # spin indices
         s1, s2, s3, s4 = ind % 2
@@ -106,7 +106,7 @@ class MatrixElementParser:
     def Z(self, Z):
         self._Z = Z
 
-    def show_matrix(self):
+    def show(self):
         """
         Plots the values of the matrix, for Z = 1.
         """
@@ -129,7 +129,4 @@ class MatrixElementParser:
 
 if __name__ == "__main__":
     a = MatrixElementParser()
-    # print(a.eval_data(1))
-    # a.show_matrix()
-    # print(a.matrix)
     print(a[2, 2, 2, 2])

@@ -51,22 +51,33 @@ class HartreeFock:
 
         ref_ref[0, 0] = self.Eref
         for ind1, (i, a) in enumerate(singles):
+            # Evaluate <c|H|Φ_i^a> = <i|h|a> + Σ<ij|a|aj>
+            ref_sing[ind1] = self.matrix[i, a]
+            ref_sing[ind1] = sum(self.matrix[i, j, a, j] for j in core)
+
+            # Evaluate <Φ_i^a|H|Φ_j^b> = <aj|v|ib>_AS + <a|h|b>δij
+            #                          - <j|h|i>δab + Erefδijδab
             for ind2, (j, b) in enumerate(singles):
                 E = self.matrix[a, j, i, b]
                 E += self.matrix[a, b] if i == j else 0
-                E -= self.matrix[i, j] if a == b else 0
+                E -= self.matrix[j, i] if a == b else 0
                 E += self.Eref if (i == j and a == b) else 0
+                for k in range(nsingles):
+                    E += self.matrix[a, k, b, k] if i == j else 0
+                    E -= self.matrix[j, k, i, k] if a == b else 0
                 sing_sing[ind1, ind2] = E
-
-            ref_sing[ind1] = sum(self.matrix[i, j, a, j] for j in core)
-            ref_sing[ind1] += self.matrix[i, a]
 
         H = np.block([[ref_ref, ref_sing.T],
                       [ref_sing, sing_sing]])
-
         return H
 
     def energy_states(self):
         H = self.Hamiltonian()
         e, v = np.linalg.eig(H)
         return e, v
+
+
+if __name__ == '__main__':
+    system = HartreeFock(Z=2)
+    print(system.Hamiltonian())
+    system.energy_states()[0]
