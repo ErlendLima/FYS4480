@@ -2,7 +2,7 @@ import numpy as np
 from matrixelementparser import MatrixElementParser
 
 
-class HartreeFock:
+class FCI:
     def __init__(self, Z):
         self.Z = Z
         self.matrix = MatrixElementParser(Z=Z)
@@ -27,9 +27,9 @@ class HartreeFock:
         # Fix these lines later to generalize
         n_states = 5
 
-        F = 2
+        F = self.Z
         core = np.arange(F)
-        n_virtual = 4
+        n_virtual = 6 - self.Z
         virtual = np.arange(n_virtual) + F
 
         refs = [0, 1]
@@ -74,10 +74,14 @@ class HartreeFock:
     def energy_states(self):
         H = self.Hamiltonian()
         e, v = np.linalg.eig(H)
+        # print(e, v)
+        # print(np.sort(e))
         return e, v
 
 
 if __name__ == '__main__':
-    system = HartreeFock(Z=2)
+    system = FCI(Z=2)
     print(system.Hamiltonian())
+    print(FCI(Z=2).energy_states()[0])
+    print(FCI(Z=4).energy_states()[0])
     system.energy_states()[0]
