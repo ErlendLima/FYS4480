@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 
 
-class MatrixElementParser(object):
+class MatrixElementParser:
 
     """
     Reads matrix element expressions from file and stores as a pandas
@@ -27,6 +27,11 @@ class MatrixElementParser(object):
         if np.any(ind < 0) or np.any(5 < ind):
             raise IndexError("Index out of range.")
 
+        if len(ind) == 2:
+            return self.onebody(*ind)
+        elif len(ind) != 4:
+            raise IndexError("Expected 2 or 4 indicies.")
+
         # spin indices
         s1, s2, s3, s4 = ind % 2
         # spatial indices
@@ -37,7 +42,7 @@ class MatrixElementParser(object):
             - matr.loc[(r1, r2), (r4, r3)] * ((s1 == s4) and (s2 == s3))
         return mel
 
-    def onebody(self,p,q):
+    def onebody(self, p, q):
         n = p//2 + 1
         if n != q//2 + 1:
             return 0
@@ -120,7 +125,6 @@ class MatrixElementParser(object):
         cax = fig.colorbar(m, fraction=0.046, pad=0.04)
         cax.set_label('Units of $Z$')
         plt.show()
-
 
 
 if __name__ == "__main__":
