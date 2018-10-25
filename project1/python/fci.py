@@ -62,7 +62,7 @@ class FCI:
                 E += self.matrix[a, b] if i == j else 0
                 E -= self.matrix[j, i] if a == b else 0
                 E += self.Eref if ((i == j) and (a == b)) else 0
-                for k in range(nsingles):
+                for k in range(F):
                     E += self.matrix[a, k, b, k] if i == j else 0
                     E -= self.matrix[j, k, i, k] if a == b else 0
                 sing_sing[ind1, ind2] = E
@@ -83,5 +83,4 @@ if __name__ == '__main__':
     system = FCI(Z=2)
     print(system.Hamiltonian())
     print(FCI(Z=2).energy_states()[0])
-    print(FCI(Z=4).energy_states()[0])
-    system.energy_states()[0]
+    # print(FCI(Z=4).energy_states()[0])
