@@ -27,9 +27,9 @@ class MatrixElementParser:
         if np.any(ind < 0) or np.any(5 < ind):
             raise IndexError("Index out of range.")
 
-        if ind.size == 2:
+        if ind.shape[0] == 2:
             return self.onebody(*ind)
-        elif ind.size != 4:
+        elif ind.shape[0] != 4:
             raise IndexError("Expected 2 or 4 indices.")
 
         # spin indices
@@ -43,11 +43,9 @@ class MatrixElementParser:
         return mel
 
     def onebody(self, p, q):
-        n = p//2 + 1
-        if n != q//2 + 1:
-            return 0
-        else:
-            return -self.Z**2/(2*n**2)
+        n1 = p//2 + 1
+        n2 = q//2 + 1
+        return -self.Z**2/(2*n1**2) * (n1 == n2)
 
     @staticmethod
     def read_data(filename):
