@@ -35,11 +35,13 @@ class MatrixElementParser:
         # spin indices
         s1, s2, s3, s4 = ind % 2
         # spatial indices
-        r1, r2, r3, r4 = ind // 2 + 1
+        r1, r2, r3, r4 = np.atleast_2d(ind.T // 2 + 1).T
+        # don't know if this is the best method for vectorized indexing,
+        # but it works
 
-        matr = self.matrix
-        mel = matr.loc[(r1, r2), (r3, r4)] * ((s1 == s3) and (s2 == s4)) \
-            - matr.loc[(r1, r2), (r4, r3)] * ((s1 == s4) and (s2 == s3))
+        matr = self.matrix.stack().stack()
+        mel = matr.loc[list(zip(r1,r2,r3,r4))].values * np.logical_and(s1 == s3, s2 == s4) \
+            - matr.loc[list(zip(r1,r2,r4,r3))].values * np.logical_and(s1 == s4, s2 == s3) 
         return mel
 
     def onebody(self, p, q):
