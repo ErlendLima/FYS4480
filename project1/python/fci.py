@@ -48,7 +48,7 @@ class FCI:
                 for beta in range(n):
                     for gamma in range(n):
                         for delta in range(n):
-                            self._v[alpha,beta] = self.matrix[alpha, beta, gamma, delta]
+                            self._v[alpha,beta,gamma,delta] = self.matrix[alpha, beta, gamma, delta]
             return self._v
 
 
