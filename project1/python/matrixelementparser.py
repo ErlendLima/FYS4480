@@ -12,10 +12,20 @@ class MatrixElementParser:
     different Z with i.e self.eval_data(Z=2).
     """
 
-    def __init__(self, filename='../data/matrix_data.txt', Z=1):
+    def __init__(self, filename='../data/matrix_data.txt', Z=1): 
         self.filename = filename
         self.sympy_data = self.read_data(filename)
         self.Z = Z  # invokes property
+
+
+    @property
+    def matrix(self):
+        """Returns interaction-matrix between spatial wavefunctions"""
+        try:
+            return self._matrix
+        except AttributeError:
+            self._matrix = self.eval_data()
+            return self._matrix
 
     def __getitem__(self, ind):
         """
@@ -85,24 +95,6 @@ class MatrixElementParser:
             m.index = row_ind
             m.columns = col_ind
         return m.astype('float')
-
-    @property
-    def matrix(self):
-        """Returns matrix"""
-        try:
-            return self._matrix
-        except AttributeError:
-            self._matrix = self.eval_data()
-            return self._matrix
-
-    @property
-    def Z(self):
-        """Very redundant :)"""
-        return self._Z
-
-    @Z.setter
-    def Z(self, Z):
-        self._Z = Z
 
     def show(self):
         """

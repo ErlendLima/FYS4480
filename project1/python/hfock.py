@@ -29,73 +29,69 @@ def density_matr(C, F = 2):
     D = (C.conj().T[:,:F]) @ (C[:F, :]) # slightly faster (1.6 µs < 2.5 µs)
     return D
 
-def solve_hfock(n, hf):
+def solve_hfock(L, hf, tol = 1e-6, max_itr = 20):
     
     hfocks = []
     energies = []
     
     F = hf.Z
-    C = np.eye(n)
+    C = np.eye(L)
 
 
     hfock_diff = np.inf
-    tol = 1e-2
-    max_itr = 20
-    itr = 0
+    itr = 1
     
-    D = density_matr(C)
+    print(F)
+    D = density_matr(C, F=F)
+    energies.append(calc_hf_energy(D, hf))
+    print(energies[0])
 
+    print('{:<12}  {:<12}   {:<25}   {:<12}'.format("Iteration" ,'energy:',
+        '∑_i |ϵ^n_i−ϵ^{n−1}_i| /n', 'ionization energies'))
     while hfock_diff > tol and  itr < max_itr:
-        hfock = np.zeros((n,n))
+        hfock = np.zeros((L,L))
         
-        for alpha in range(n):
-            for beta in range(n):
+        for alpha in range(L):
+            for beta in range(L):
                 hfock[alpha,beta] += hf.matrix[alpha,beta]
 
-                for gamma in range(n):
-                    for delta in range(n):
+                for gamma in range(L):
+                    for delta in range(L):
                         hfock[alpha,beta] += D[gamma,delta]*hf.matrix[alpha, gamma, beta, delta]
 
         e, Cdagger = np.linalg.eigh(hfock)
 
-        C = Cdagger.conj().T
-        D = density_matr(C)
+        C = Cdagger.T.conj()
+        D = density_matr(C, F=F)
         
         try:
-            assert np.all(np.isclose(C @ C.T, np.eye(n)))
+            assert np.all(np.isclose(C @ C.T, np.eye(L)))
         except AssertionError:
             warnings.warn('C is not unitary')
             
         hfocks.append(e)
-        energies.append(calc_hf_energy(C, D, hf))
+        energies.append(calc_hf_energy(D, hf))
         
         if len(hfocks) > 1:
             hfock_diff = np.mean(np.abs(hfocks[-1] - hfocks[-2]))
-        print(72*'=')
-        print('{:<12} {:<12}'.format('energy:', 'diff'))
-        print('{:<12.9f} {:<12.9f}'.format(energies[-1], hfock_diff))
-        print()
-        print('ionization energies:')
-        print(e)
+        np.set_printoptions(precision=3)
+        print('{:^12}  {:<12.6f}   {:<25.6f}   {}'.format(itr,
+            energies[-1], hfock_diff, e))
+        itr += 1
     return C
 
     
-def calc_hf_energy(C, D, hf):
+def calc_hf_energy(D, hf):
     F = hf.Z
-    n = C.shape[0]
-
-    # _, [ax1,ax2] = plt.subplots(1,2)
-    # ax1.imshow(np.einsum('ji,ki->jk',C,C))
-    # ax2.imshow(D)
-    # plt.show()
+    L = D.shape[0]
 
     E = 0
-    for alpha in range(n):
-        for beta in range(n):
-            E += D[alpha,beta]*hf.matrix[alpha, beta]
+    for alpha in range(L):
+        for beta in range(L):
+            E += D[alpha,beta] * hf.matrix[alpha, beta]
 
-            for gamma in range(n):
-                for delta in range(n):
+            for gamma in range(L):
+                for delta in range(L):
                     E += 0.5*D[alpha,gamma]*D[beta,delta]*hf.matrix[alpha, beta, gamma, delta]
     
     return E

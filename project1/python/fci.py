@@ -3,9 +3,13 @@ from matrixelementparser import MatrixElementParser
 
 
 class FCI:
-    def __init__(self, Z):
+    def __init__(self, Z, n = 6):
+        """
+            TODO: Find a better way of defining n
+        """
         self.Z = Z
         self.matrix = MatrixElementParser(Z=Z)
+        self.n = n
 
     @property
     def Eref(self):
@@ -17,9 +21,36 @@ class FCI:
             for i in range(self.Z):
                 for j in range(self.Z):
                     Eref += 0.5*self.matrix[i, j, i, j]
-                Eref += self.matrix.onebody(i, i)
+                Eref += self.matrix[i,i]
             self._Eref = Eref
             return Eref
+
+    @property
+    def h(self):
+        try:
+            return self._h
+        except AttributeError:
+            n = self.n
+            self._h = np.zeros((n,n))
+            for alpha in range(n):
+                for beta in range(n):
+                    self._h[alpha,beta] = self.matrix[alpha, beta]
+            return self._h
+
+    @property
+    def v(self):
+        try:
+            return self._v
+        except AttributeError:
+            n = self.n
+            self._v = np.zeros((n,n,n,n))
+            for alpha in range(n):
+                for beta in range(n):
+                    for gamma in range(n):
+                        for delta in range(n):
+                            self._v[alpha,beta] = self.matrix[alpha, beta, gamma, delta]
+            return self._v
+
 
     def Hamiltonian(self):
         """ Constructs the Hamiltonian """
