@@ -12,11 +12,10 @@ class MatrixElementParser:
     different Z with i.e self.eval_data(Z=2).
     """
 
-    def __init__(self, filename='../data/matrix_data.txt', Z=1): 
+    def __init__(self, filename='../data/matrix_data.txt', Z=1):
         self.filename = filename
         self.sympy_data = self.read_data(filename)
         self.Z = Z  # invokes property
-
 
     @property
     def matrix(self):
@@ -114,6 +113,7 @@ class MatrixElementParser:
         cax = fig.colorbar(m, fraction=0.046, pad=0.04)
         cax.set_label('Units of $Z$')
         plt.show()
+        return fig, ax
 
 
 if __name__ == "__main__":
