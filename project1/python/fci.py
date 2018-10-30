@@ -1,9 +1,16 @@
 import numpy as np
 from matrixelementparser import MatrixElementParser
+from itertools import product
+
+
+def cartesian_product(*args):
+    """ Yields tuples over every integer coordinate in ⨉(n, m, ...) """
+    for element in product(*[range(n) for n in args]):
+        yield element
 
 
 class FCI:
-    def __init__(self, Z, n = 6):
+    def __init__(self, Z, n=6):
         """
             TODO: Find a better way of defining n
         """
@@ -21,7 +28,7 @@ class FCI:
             for i in range(self.Z):
                 for j in range(self.Z):
                     Eref += 0.5*self.matrix[i, j, i, j]
-                Eref += self.matrix[i,i]
+                Eref += self.matrix[i, i]
             self._Eref = Eref
             return Eref
 
@@ -31,10 +38,9 @@ class FCI:
             return self._h
         except AttributeError:
             n = self.n
-            self._h = np.zeros((n,n))
-            for alpha in range(n):
-                for beta in range(n):
-                    self._h[alpha,beta] = self.matrix[alpha, beta]
+            self._h = np.zeros((n, n))
+            for α, β in cartesian_product(n, n):
+                self._h[α, β] = self.matrix[α, β]
             return self._h
 
     @property
@@ -43,14 +49,10 @@ class FCI:
             return self._v
         except AttributeError:
             n = self.n
-            self._v = np.zeros((n,n,n,n))
-            for alpha in range(n):
-                for beta in range(n):
-                    for gamma in range(n):
-                        for delta in range(n):
-                            self._v[alpha,beta,gamma,delta] = self.matrix[alpha, beta, gamma, delta]
+            self._v = np.zeros((n, n, n, n))
+            for α, β, γ, δ in cartesian_product(n, n, n, n):
+                self._v[α, β, γ, δ] = self.matrix[α, β, γ, δ]
             return self._v
-
 
     def Hamiltonian(self):
         """ Constructs the Hamiltonian """
@@ -83,7 +85,7 @@ class FCI:
         ref_ref[0, 0] = self.Eref
         for ind1, (i, a) in enumerate(singles):
             # Evaluate <c|H|Φ_i^a> = <i|h|a> + Σ<ij|a|aj>
-            ref_sing[ind1] = self.matrix[i, a] # = 0 always
+            ref_sing[ind1] = self.matrix[i, a]  # = 0 always
             ref_sing[ind1] += sum(self.matrix[i, j, a, j] for j in core)
 
             # Evaluate <Φ_i^a|H|Φ_j^b> = <aj|v|ib>_AS + <a|h|b>δij
@@ -105,8 +107,6 @@ class FCI:
     def energy_states(self):
         H = self.Hamiltonian()
         e, v = np.linalg.eigh(H)
-        # print(e, v)
-        # print(np.sort(e))
         return e, v
 
 

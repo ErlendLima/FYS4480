@@ -56,7 +56,6 @@ class MatrixElementParser:
         n = p//2 + 1
         return -self.Z**2/(2*n**2) * (p == q)
 
-
     @staticmethod
     def read_data(filename):
         """
