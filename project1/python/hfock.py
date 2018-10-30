@@ -11,7 +11,7 @@ def density_matr(C, F=2):
     return D
 
 
-def solve_hfock(hf, tol=1e-6, max_itr=20):
+def solve_hfock(hf, tol=1e-6, max_itr=20, verbose=True):
     """ Finds the HarteeFock energies for the system hf
 
     Computes the HartreeFock Hamiltonian as
@@ -31,6 +31,10 @@ def solve_hfock(hf, tol=1e-6, max_itr=20):
         energy eigenvalues (ionization energies) for each iteration
     """
 
+    def vprint(*args, **kwargs):
+        if verbose:
+            print(*args, **kwargs)
+
     np.set_printoptions(precision=3)
 
     hfocks = []
@@ -44,11 +48,11 @@ def solve_hfock(hf, tol=1e-6, max_itr=20):
 
     D = density_matr(C, F=F)
     energies.append(calc_hf_energy(D, hf))
-    print('Reference energy: ', energies[0])
+    vprint('Reference energy: ', energies[0])
 
-    print('{:<12}  {:<12}   {:<25}   {:<12}'.format("Iteration", 'energy:',
-                                                    '∑_i |ϵ^n_i−ϵ^{n−1}_i| /n',
-                                                    'ionization energies'))
+    vprint('{:<12}  {:<12}   {:<25}   {:<12}'.format("Iteration", 'energy:',
+                                                     '∑_i |ϵ^n_i−ϵ^{n−1}_i| /n',
+                                                     'ionization energies'))
     while hfock_diff > tol and itr < max_itr:
         hfock = hf.h + np.einsum('gd,agbd->ab', D, hf.v, optimize=True)
         e, Cdagger = np.linalg.eigh(hfock)
@@ -65,7 +69,7 @@ def solve_hfock(hf, tol=1e-6, max_itr=20):
         if len(hfocks) > 1:
             hfock_diff = np.mean(np.abs(hfocks[-1] - hfocks[-2]))
 
-        print(f'{itr:^12}  {energies[-1]:<12.6g}   {hfock_diff:<25.6g}   {e}')
+        vprint(f'{itr:^12}  {energies[-1]:<12.6g}   {hfock_diff:<25.6g}   {e}')
         itr += 1
     return energies, hfocks
 
