@@ -2,6 +2,9 @@ from sympy.parsing import sympy_parser
 import sympy as sp
 import numpy as np
 import pandas as pd
+from os.path import realpath, dirname, join
+MATRIXPATH = join(realpath(dirname(__file__)),
+                  "../data/matrix_data.txt")
 
 
 class MatrixElementParser:
@@ -12,7 +15,7 @@ class MatrixElementParser:
     different Z with i.e self.eval_data(Z=2).
     """
 
-    def __init__(self, filename='../data/matrix_data.txt', Z=1):
+    def __init__(self, filename=MATRIXPATH, Z=1):
         self.filename = filename
         self.sympy_data = self.read_data(filename)
         self.Z = Z  # invokes property
@@ -28,7 +31,7 @@ class MatrixElementParser:
 
     def __getitem__(self, ind):
         """
-        Gets matrix element <pq|V|rs>_AS from ind = [p,q,r,s], assuming
+        Gets matrix element ⟨pq|V|rs⟩_AS from ind = [p,q,r,s], assuming
         p,q,r,s ∈ {0,...,5} with odd and even integers corresponding to
         opposite spins, and (p//2 + 1) as the energy levels 1s, 2s, 3s.
         """
@@ -52,6 +55,8 @@ class MatrixElementParser:
         return mel
 
     def onebody(self, p, q):
+        """ Returns ⟨p|f|q⟩ = -Z²/(2n²)⋅δpq
+        """
         n = p//2 + 1
         return -self.Z**2/(2*n**2) * (p == q)
 
