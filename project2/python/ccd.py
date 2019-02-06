@@ -10,6 +10,7 @@ from fci import FCI
 from fci import cartesian_product
 from numpy import einsum
 from itertools import product
+import matplotlib.pyplot as plt
 
 
 def es(*args, **kwargs):
@@ -22,28 +23,22 @@ class CCD(FCI):
         self.t = self.initial_guess()
 
     def initial_guess(self):
-        ϵ = np.einsum('ii->i', self.h)
-        M, N = self.num_particles, self.num_holes
-        # t = np.zeros((M, M, N, N))
-        t = np.zeros_like(self.v)
-        self.D_abij = np.zeros_like(self.v)
-        indicies = tuple(zip(*self.pphh()))
-        mask = np.full(t.shape, False)
-        mask[indicies] = True
+        ϵ = np.einsum('pp->p', self.f)
+        F, M, N = self.fermi, self.num_holes, self.num_particles
+        H, P = self.holes, self.particles
+        t = np.zeros((M, M, N, N))
+        self.D_ijab = np.zeros_like(t)
         for i, j, a, b in self.hhpp():
-            self.D_abij[a, b, i, j] = ϵ[i] - ϵ[j] + ϵ[a] + ϵ[b]
-        t[mask] = self.v[mask]/self.D_abij[mask]
-        self.mask = mask
+            self.D_ijab[i, j, a-F, b-F] = ϵ[i] + ϵ[j] - ϵ[a] - ϵ[b]
+        t = self.v[H, H, P, P]/self.D_ijab
         return t
 
     def energy(self):
-        # e = 0
-        # for a, b, i, j in self.pphh():
-        #     e += 1/4*self.v[a, b, i, j]*self.t[a, b, i, j]
-        # return e
-        return self.Eref + 1/4*es('ijab,abij', self.v, self.t)
+        # E_CCD = E_ref + E_corr = Eref + 1/4Σ_abij ⟨ij|v|ab⟩t_ij^ab
+        H, P = self.holes, self.particles
+        return self.Eref + 1/4*es('ijab,ijab', self.v[H, H, P, P], self.t)
 
-    def iterate(self):
+    def iterate(self, t):
         """
         Compute ⟨Φ_ij^ab|̄H|0⟩ = 0. Splitting up the operator, we have
         Ĥ =  Eref + F̂ + V̂, H̄ = exp(T)Ĥ exp(-T) so
@@ -61,53 +56,52 @@ class CCD(FCI):
                                 - ½P(ab)Σ_klcd⟨kl|v|cd⟩t_ij^ac t_kl^bd  (4.d)
         (***) For the iterative scheme we change these into
         ⟨Φ_ij^ab|[F,T]|c⟩** = P(ij)Σ_k≠i f_i^k t_jk^ab                  (2.a)
-                            - P(ab)Σ_c≠a f_c^a t_ij^bc  (***)           (2.b)
-
+                            - P(ab)Σ_c≠a f_c^a t_ij^bc  (***)
         The amplitudes is found iteratively by computing
         (t_ij^ab)^(k+1) = g((t_ij^ab)^(k))/(ϵ_i + ϵ_j - ϵ_a - ϵ_b)
         where g(...) is the modified sum shown above.
         """
-        t = self.initial_guess()
-
+        H, P = self.holes, self.particles
         v = self.v
-        f = self.h
-        ϵ = np.einsum('ii->i', self.h)
-        mask = self.mask
-        holes = self.virtual
-        part = self.core
-        for counter in range(10):
-            H = (
-                v                                           # (1)
-                # - es('ca,bcij->abij', f, t)                 # (2.b)
-                # + es('cb,acij->abij', f, t)                 # (2.b)
-                # + 1/2*es('klij,abkl->abij', v, t)           #
-                # + es('klij,abkl->abij', v, t)               # (3.b)
-                # - es('klji,bakl->abij', v, t)               # (3.b)
-                + 1/2*es('abcd,cdij->abij', v, t)           # (3.c)
-                + 1/4*es('klcd,abkl,cdij->abij', v, t, t)   # (4.a)
-                - 1/2*es('klcd,abil,cdkj->abij', v, t, t)   # (4.b)
-                + 1/2*es('klcd,abjl,cdki->abij', v, t, t)   # (4.b) i→j
-                - es('klcd,acik,bdlj->abij', v, t, t)   # (4.c)
-                + es('klcd,bcik,adlj->abij', v, t, t)   # (4.c) a→b
-                - 1/2*es('klcd,acij,bdkl->abij', v, t, t)   # (4.d)
-                + 1/2*es('klcd,bcij,adkl->abij', v, t, t)   # (4.d) a→b
-                )
-            # Special case of k≠i and c≠a                     (2.a)
-            # for i, j, a, b in product(holes, holes, part, part):
-            #     for k in range(self.n):
-            #         if k == i:
-            #             continue
-            #         H += f[i, k]*t[a, b, j, k] - f[j, k]*t[a, b, i, k]
-            #     for c in range(self.n):
-            #         if c == a:
-            #             continue
-            #         H -= f[c, a]*t[b, c, i, j] - f[c, b]*t[a, c, i, j]
+        vpppp = v[P, P, P, P]
+        vhhhh = v[H, H, H, H]
+        vhhpp = v[H, H, P, P]
+        vphph = v[P, H, P, H]
+        # Special case of k≠i and c≠a                     (2.a)
+        f0 = self.f.copy()
+        f0[np.diag_indices_from(f0)] = 0
+        # Sign errors cause insane oscillations
+        HN = (
+            vhhpp                                          # (1)
+            + es('ki,jkab->ijab', f0[H, H], t)             # (2.a) L1b
+            - es('kj,ikab->ijab', f0[H, H], t)             # (2.a)
+            - es('ac,ijbc->ijab', f0[P, P], t)             # (2.b) L1a
+            + es('bc,ijac->ijab', f0[P, P], t)             # (2.b)
+            + 1/2*es('klij,klab->ijab', vhhhh, t)          # (3.a) L2b
+            + 1/2*es('abcd,ijcd->ijab', vpppp, t)          # (3.c) L2a
+            - es('akcj,ikcb->ijab', vphph, t)              # (3.b) L2c
+            + es('bkcj,ikca->ijab', vphph, t)              # (3.b)
+            + es('akci,jkcb->ijab', vphph, t)              # (3.b)
+            - es('bkci,jkca->ijab', vphph, t)              # (3.b)
+            + 1/4*es('klcd,klab,ijcd->ijab', vhhpp, t, t)  # (4.a) Qa
+            - 1/2*es('klcd,ilab,kjcd->ijab', vhhpp, t, t)  # (4.b) Qc
+            + 1/2*es('klcd,jlab,kicd->ijab', vhhpp, t, t)  # (4.b) Qc
+            - es('klcd,ikac,ljbd->ijab', vhhpp, t, t)      # (4.c) Qb
+            + es('klcd,ikbc,ljad->ijab', vhhpp, t, t)      # (4.c) Qb
+            - 1/2*es('klcd,ijac,klbd->ijab', vhhpp, t, t)  # (4.d) Qd
+            + 1/2*es('klcd,ijbc,klad->ijab', vhhpp, t, t)  # (4.d) Qd
+        )
+        return HN/self.D_ijab
 
-            t[mask] = H[mask]/self.D_abij[mask]
-            # print("Waste: ", H[~mask].sum())
-            self.t = t
-            print(counter, ":", self.energy())
-        self.t = t
+    def run(self):
+        self.t = self.initial_guess()
+        N = 100
+        E = np.zeros(N)
+        for counter in range(N):
+            self.t = self.iterate(self.t)
+            E[counter] = self.energy()
+        plt.plot(E, '-o')
+        plt.show()
 
     def explicit_iterate(self):
         t = self.initial_guess()

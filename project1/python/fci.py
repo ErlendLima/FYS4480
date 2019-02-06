@@ -37,21 +37,22 @@ class FCI:
         self.n = 2+2+2
         # Set Fermi level equal to the element's proton number
         self.fermi = Z
+        # Num_particles is the number of a,b,c... indicies, not the "actual"
+        # number of physical particles below the fermi level
         self.num_particles = self.n - self.fermi
         self.num_holes = self.fermi
         self.core = np.arange(self.fermi)
         self.virtual = np.arange(self.num_particles) + self.fermi
-        self.hole_ind = slice(0, self.fermi)           # i, j, k, ...
-        self.particle_ind = slice(self.fermi, self.n)  # a, b, c, ...
+        self.holes = slice(0, self.fermi)           # i, j, k, ...
+        self.particles = slice(self.fermi, self.n)  # a, b, c, ...
 
     @pureproperty
     def Eref(self):
         """ The reference energy """
-        Eref = 0
-        for i in range(self.Z):
-            for j in range(self.Z):
-                Eref += 0.5*self.matrix[i, j, i, j]
-            Eref += self.matrix[i, i]
+        # Equivalent code for illustration
+        H = self.holes
+        Eref = np.einsum('ii', self.h[H, H], optimize=True)
+        Eref += 0.5*np.einsum('ijij', self.v[H, H, H, H], optimize=True)
         return Eref
 
     @pureproperty
@@ -61,6 +62,11 @@ class FCI:
         for α, β in cartesian_product(n, n):
             h[α, β] = self.matrix[α, β]
         return h
+
+    @pureproperty
+    def f(self):
+        # ⟨p|f|q⟩ = ⟨p|h₀|q⟩ + Σᵢ ⟨pi|v|qi⟩
+        return self.h + np.einsum('piqi->pq', self.v[:, self.holes, :, self.holes])
 
     @pureproperty
     def v(self):
