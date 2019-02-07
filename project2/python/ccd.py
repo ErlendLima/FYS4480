@@ -21,6 +21,9 @@ class CCD(FCI):
     def __init__(self, Z):
         super().__init__(Z)
         self.t = self.initial_guess()
+        self.include_v = True
+        self.include_L = True
+        self.include_Q = True
 
     def initial_guess(self):
         ϵ = np.einsum('pp->p', self.f)
@@ -28,15 +31,19 @@ class CCD(FCI):
         H, P = self.holes, self.particles
         t = np.zeros((M, M, N, N))
         self.D_ijab = np.zeros_like(t)
-        for i, j, a, b in self.hhpp():
+        for i, j, a, b in self.hhpp():  # Validated with independent source
             self.D_ijab[i, j, a-F, b-F] = ϵ[i] + ϵ[j] - ϵ[a] - ϵ[b]
         t = self.v[H, H, P, P]/self.D_ijab
         return t
 
+    def Ecorr(self):
+        # E_corr = 1/4Σ_abij ⟨ij|v|ab⟩t_ij^ab
+        H, P = self.holes, self.particles
+        return 1/4*es('ijab,ijab', self.v[H, H, P, P], self.t)
+
     def energy(self):
         # E_CCD = E_ref + E_corr = Eref + 1/4Σ_abij ⟨ij|v|ab⟩t_ij^ab
-        H, P = self.holes, self.particles
-        return self.Eref + 1/4*es('ijab,ijab', self.v[H, H, P, P], self.t)
+        return self.Eref + self.Ecorr()
 
     def iterate(self, t):
         """
@@ -70,9 +77,10 @@ class CCD(FCI):
         # Special case of k≠i and c≠a                     (2.a)
         f0 = self.f.copy()
         f0[np.diag_indices_from(f0)] = 0
+
         # Sign errors cause insane oscillations
-        HN = (
-            vhhpp                                          # (1)
+        HN = np.copy(vhhpp)
+        L = (
             + es('ki,jkab->ijab', f0[H, H], t)             # (2.a) L1b
             - es('kj,ikab->ijab', f0[H, H], t)             # (2.a)
             - es('ac,ijbc->ijab', f0[P, P], t)             # (2.b) L1a
@@ -83,6 +91,8 @@ class CCD(FCI):
             + es('bkcj,ikca->ijab', vphph, t)              # (3.b)
             + es('akci,jkcb->ijab', vphph, t)              # (3.b)
             - es('bkci,jkca->ijab', vphph, t)              # (3.b)
+            )
+        Q = (
             + 1/4*es('klcd,klab,ijcd->ijab', vhhpp, t, t)  # (4.a) Qa
             - 1/2*es('klcd,ilab,kjcd->ijab', vhhpp, t, t)  # (4.b) Qc
             + 1/2*es('klcd,jlab,kicd->ijab', vhhpp, t, t)  # (4.b) Qc
@@ -91,52 +101,23 @@ class CCD(FCI):
             - 1/2*es('klcd,ijac,klbd->ijab', vhhpp, t, t)  # (4.d) Qd
             + 1/2*es('klcd,ijbc,klad->ijab', vhhpp, t, t)  # (4.d) Qd
         )
+
+        if self.include_L:
+            HN += L
+        if self.include_Q:
+            HN += Q
         return HN/self.D_ijab
 
-    def run(self):
-        self.t = self.initial_guess()
-        N = 100
-        E = np.zeros(N)
-        for counter in range(N):
+    def solve(self, tol=1e-10, maxiter=1e4):
+        self.t = self.iterate(self.t)
+        E = [self.energy()]
+        Ecorr = [self.Ecorr()]
+        counter = 1
+        diff = np.inf
+        while counter < maxiter and diff > tol:
             self.t = self.iterate(self.t)
-            E[counter] = self.energy()
-        plt.plot(E, '-o')
-        plt.show()
+            E.append(self.energy())
+            Ecorr.append(self.Ecorr())
+            diff = abs((E[-1]-E[-2])/E[-1])
 
-    def explicit_iterate(self):
-        t = self.initial_guess()
-        v = self.v
-        f = self.h
-        for counter in range(10):
-            tk = np.copy(t)
-            for i, j, a, b in self.hhpp():
-                t[a, b, i, j] = v[a, b, i, j]
-                # for k in self.core:       # (2.a)  #ALWAYS 0 for HF. Gives roundoff error
-                #     if k == i:
-                #         continue
-                #     t[a, b, i, j] += f[i, k]*tk[a, b, j, k] - f[j, k]*tk[a, b, i, k]
-                # for c in self.virtual:   # (2.b)
-                #     if c == a:
-                #         continue
-                #     t[a, b, i, j] -= f[c, a]*tk[b, c, i, j] - f[c, b]*tk[a, c, i, j]
-                #     print(f[c, a]*tk[b, c, i, j], - f[c, b]*tk[a, c, i, j])
-                # for k, l in self.hh():  # Causes oscillations
-                    # t[a, b, i, j] += 1/2*v[k, l, i, j]*tk[a, b, k, l]
-                # for k, c in self.hp():
-                    # t[a, b, i, j] += v[a, k, i, c]*tk[b, c, j, k] - v[b, k, j, c]*tk[a, c, i, k]
-                for c, d in self.pp():
-                    t[a, b, i, j] += 1/2*v[a, b, c, d]*tk[c, d, i, j]
-                for k, l, c, d in self.hhpp():
-                    t[a, b, i, j] += 1/4*v[k, l, c, d]*tk[a, b, k, l]*tk[c, d, i, j]
-                    t[a, b, i, j] -= 1/2*(v[k, l, c, d]*tk[a, b, i, l]*tk[c, d, k, j] -
-                                          v[k, l, c, d]*tk[a, b, j, l]*tk[c, d, k, i])
-                    t[a, b, i, j] -= (v[k, l, c, d]*tk[a, c, i, k]*tk[b, d, l, j] -
-                                      v[k, l, c, d]*tk[b, c, i, k]*tk[a, d, l, j])
-                    t[a, b, i, j] -= 1/2*(v[k, l, c, d]*tk[a, c, i, j]*tk[b, d, k, l] -
-                                          v[k, l, c, d]*tk[b, c, i, j]*tk[a, d, k, l])
-                t[a, b, i, j] /= self.D_abij[a, b, i, j]
-            self.t = t
-            # print(t.sum())
-            print(counter, ":", self.energy())
-
-
+        return E, Ecorr

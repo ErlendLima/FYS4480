@@ -92,21 +92,10 @@ class FCI:
 
         return excitations
 
-    def shifted_excitations(self):
-        """ Same as excitations but with particle indices shifted by M """
-        M = self.num_particles
-        return [(i, a-M) for (i, a) in self.excitations()]
-
     def double_excitations(self):
         for i, a in self.excitations():
             for j, b in self.excitations():
                 yield i, j, a, b
-
-    def shifted_double_excitations(self):
-        M = self.num_particles
-        for i, a in self.excitations():
-            for j, b in self.excitations():
-                yield i, j, a-M, b-M
 
     def hhpp(self):
         return product(self.core, self.core, self.virtual, self.virtual)
