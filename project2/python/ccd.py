@@ -10,7 +10,7 @@ from fci import FCI
 from fci import cartesian_product
 from numpy import einsum
 from itertools import product
-import matplotlib.pyplot as plt
+from hfock import solve_hfock
 
 
 def es(*args, **kwargs):
@@ -18,20 +18,53 @@ def es(*args, **kwargs):
 
 
 class CCD(FCI):
-    def __init__(self, Z):
+    """ Class to solve CCD equations
+
+    Uses the framework created by FCI to set up the matrices of F and V.
+    Method solve() solves the amplitude and energy equations for a given
+    Z, returning the energy computed in each step of the iterative process.
+
+    Attributes:
+        Same as FCI.
+        t: Array containing the amplitudes
+        include_v: Whether to include the term ⟨ab|v|ij⟩. Defaults to True.
+        include_L: Whether to include the L diagrams. Defaults to True.
+        include_Q: Whether to include the Q diagrams. Defaults to True.
+        D_ijab: The energy divisor in the iterative scheme.
+    """
+    def __init__(self, Z: int):
+        """ Initalizes the instance
+
+        Args:
+            Z: The proton number of the target nucleus.
+        """
         super().__init__(Z)
         self.t = self.initial_guess()
+
+        # Flags to exclude some terms from the CCD expansion
         self.include_v = True
         self.include_L = True
         self.include_Q = True
 
     def initial_guess(self):
+        """ Create an initial t_ij^ab
+
+        Also creates the D_ijab tensor and stores it
+        for later used. Should be called by __init__
+        Result of t and D has been crosschecked with
+        independently written code for Z=2 and Z=4.
+
+        Returns:
+            A numpy array of shape (M, M, N, N)
+              where M is number of holes and N
+              number of particles.
+        """
         ϵ = np.einsum('pp->p', self.f)
         F, M, N = self.fermi, self.num_holes, self.num_particles
         H, P = self.holes, self.particles
         t = np.zeros((M, M, N, N))
         self.D_ijab = np.zeros_like(t)
-        for i, j, a, b in self.hhpp():  # Validated with independent source
+        for i, j, a, b in self.hhpp():  # Validated using an independent source
             self.D_ijab[i, j, a-F, b-F] = ϵ[i] + ϵ[j] - ϵ[a] - ϵ[b]
         t = self.v[H, H, P, P]/self.D_ijab
         return t
@@ -45,8 +78,15 @@ class CCD(FCI):
         # E_CCD = E_ref + E_corr = Eref + 1/4Σ_abij ⟨ij|v|ab⟩t_ij^ab
         return self.Eref + self.Ecorr()
 
-    def iterate(self, t):
-        """
+    def iterate(self, t: np.ndarray) -> np.ndarray:
+        """ Compute one step of a CCD iterative calculation
+
+        Args:
+            t: The amplitudes t^k. Is not mutated.
+        Returns:
+            The new amplitudes t^(k+1).
+        Algorithm:
+
         Compute ⟨Φ_ij^ab|̄H|0⟩ = 0. Splitting up the operator, we have
         Ĥ =  Eref + F̂ + V̂, H̄ = exp(T)Ĥ exp(-T) so
         ⟨Φ_ij^ab|F|c⟩ = 0
@@ -74,32 +114,36 @@ class CCD(FCI):
         vhhhh = v[H, H, H, H]
         vhhpp = v[H, H, P, P]
         vphph = v[P, H, P, H]
-        # Special case of k≠i and c≠a                     (2.a)
+
+        # Take care of special case of k≠i and c≠a by removing diagonal
         f0 = self.f.copy()
         f0[np.diag_indices_from(f0)] = 0
+        T1 = (es('ki,jkab->ijab', f0[H, H], t)               # (2.a) L1b
+             - es('kj,ikab->ijab', f0[H, H], t)             # (2.a)
+             - es('ac,ijbc->ijab', f0[P, P], t)             # (2.b) L1a
+             + es('bc,ijac->ijab', f0[P, P], t)             # (2.b)
+        )
 
-        # Sign errors cause insane oscillations
-        HN = np.copy(vhhpp)
-        L = (
-            + es('ki,jkab->ijab', f0[H, H], t)             # (2.a) L1b
-            - es('kj,ikab->ijab', f0[H, H], t)             # (2.a)
-            - es('ac,ijbc->ijab', f0[P, P], t)             # (2.b) L1a
-            + es('bc,ijac->ijab', f0[P, P], t)             # (2.b)
-            + 1/2*es('klij,klab->ijab', vhhhh, t)          # (3.a) L2b
-            + 1/2*es('abcd,ijcd->ijab', vpppp, t)          # (3.c) L2a
-            - es('akcj,ikcb->ijab', vphph, t)              # (3.b) L2c
-            + es('bkcj,ikca->ijab', vphph, t)              # (3.b)
-            + es('akci,jkcb->ijab', vphph, t)              # (3.b)
-            - es('bkci,jkca->ijab', vphph, t)              # (3.b)
+        HN = np.copy(vhhpp)                                 # (1)
+        # Developer note: Sign errors cause insane oscillations
+        L = (es('ki,jkab->ijab', f0[H, H], t)               # (2.a) L1b
+             - es('kj,ikab->ijab', f0[H, H], t)             # (2.a)
+             - es('ac,ijbc->ijab', f0[P, P], t)             # (2.b) L1a
+             + es('bc,ijac->ijab', f0[P, P], t)             # (2.b)
+             + 1/2*es('klij,klab->ijab', vhhhh, t)          # (3.a) L2b
+             + 1/2*es('abcd,ijcd->ijab', vpppp, t)          # (3.c) L2a
+             - es('akcj,ikcb->ijab', vphph, t)              # (3.b) L2c
+             + es('bkcj,ikca->ijab', vphph, t)              # (3.b)
+             + es('akci,jkcb->ijab', vphph, t)              # (3.b)
+             - es('bkci,jkca->ijab', vphph, t)              # (3.b)
             )
-        Q = (
-            + 1/4*es('klcd,klab,ijcd->ijab', vhhpp, t, t)  # (4.a) Qa
-            - 1/2*es('klcd,ilab,kjcd->ijab', vhhpp, t, t)  # (4.b) Qc
-            + 1/2*es('klcd,jlab,kicd->ijab', vhhpp, t, t)  # (4.b) Qc
-            - es('klcd,ikac,ljbd->ijab', vhhpp, t, t)      # (4.c) Qb
-            + es('klcd,ikbc,ljad->ijab', vhhpp, t, t)      # (4.c) Qb
-            - 1/2*es('klcd,ijac,klbd->ijab', vhhpp, t, t)  # (4.d) Qd
-            + 1/2*es('klcd,ijbc,klad->ijab', vhhpp, t, t)  # (4.d) Qd
+        Q = (1/4*es('klcd,klab,ijcd->ijab', vhhpp, t, t)    # (4.a) Qa
+             - 1/2*es('klcd,ilab,kjcd->ijab', vhhpp, t, t)  # (4.b) Qc
+             + 1/2*es('klcd,jlab,kicd->ijab', vhhpp, t, t)  # (4.b) Qc
+             - es('klcd,ikac,ljbd->ijab', vhhpp, t, t)      # (4.c) Qb
+             + es('klcd,ikbc,ljad->ijab', vhhpp, t, t)      # (4.c) Qb
+             - 1/2*es('klcd,ijac,klbd->ijab', vhhpp, t, t)  # (4.d) Qd
+             + 1/2*es('klcd,ijbc,klad->ijab', vhhpp, t, t)  # (4.d) Qd
         )
 
         if self.include_L:
@@ -108,7 +152,20 @@ class CCD(FCI):
             HN += Q
         return HN/self.D_ijab
 
-    def solve(self, tol=1e-10, maxiter=1e4):
+    def solve(self, tol: float = 1e-10, maxiter: int = 1e4) -> ([float], [float]):
+        """ Solves the CCD equations iteratively.
+
+        Args:
+            tol: Absolute difference between the energy of the
+                last two iterations below which the iteration
+                will terminate.
+            maxiter: The maximum number of iterations above which
+                the iteration will terminate.
+        Returns:
+            Two lists containing the total energy and correlation energy
+            of each iteration. The final index corresponds to the final
+            iteration.
+        """
         self.t = self.iterate(self.t)
         E = [self.energy()]
         Ecorr = [self.Ecorr()]
@@ -119,5 +176,14 @@ class CCD(FCI):
             E.append(self.energy())
             Ecorr.append(self.Ecorr())
             diff = abs((E[-1]-E[-2])/E[-1])
+            counter += 1
 
         return E, Ecorr
+
+    def transform_to_hfock(self):
+        _, _, C = solve_hfock(self, verbose=False)
+        # ⟨p|f|q⟩ = εₚδ_pq
+        self.f[:] = np.eye(len(np.diag(self.f)))*self.f
+        Cd = C.conj()
+        # ⟨pq|v|rs⟩ = Σ_αβγδ C_αp^*  C_βq^* Cγr Cδs ⟨αβ|v|γδ⟩
+        self.v[:] = np.einsum("ap,bq,gr,ds,abgd->pqrs", Cd, Cd, C, C, self.v)

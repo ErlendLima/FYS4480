@@ -56,7 +56,6 @@ def solve_hfock(hf, tol=1e-6, max_itr=20, verbose=True):
     while hfock_diff > tol and itr < max_itr:
         hfock = hf.h + np.einsum('gd,agbd->ab', D, hf.v, optimize=True)
         e, Cdagger = np.linalg.eigh(hfock)
-
         C = Cdagger.T.conj()
         D = density_matr(C, F=F)
 
@@ -71,7 +70,7 @@ def solve_hfock(hf, tol=1e-6, max_itr=20, verbose=True):
 
         vprint(f'{itr:^12}  {energies[-1]:<12.6g}   {hfock_diff:<25.6g}   {e}')
         itr += 1
-    return energies, hfocks
+    return energies, hfocks, C
 
 
 def calc_hf_energy(D, hf):
